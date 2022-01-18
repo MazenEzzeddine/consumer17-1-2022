@@ -43,15 +43,15 @@ public class KafkaConsumerTestAssignor {
                         log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
                     }
                     Thread.sleep(1000 / eventsPerSeconds);
+                    log.info("Event waiting time = {} ms = {} sec",(System.currentTimeMillis() - record.timestamp())
+                    , (System.currentTimeMillis() - record.timestamp())/1000.0d);
                 }
             }
             Instant end = Instant.now();
-            long resMilli = Duration.between(end, start).toMillis();
-            float consRatePerSec= (float)records.count()/(float)(resMilli * 1000.0);
+            long resSec = Duration.between(start, end).toSeconds();
+            float consRatePerSec= (float)records.count()/(float)(resSec);
 
-            log.info("total time to process {} events is {} ms", records.count(), resMilli);
-
-
+            log.info("total time to process {} events is {} seconds", records.count(), resSec);
             log.info("Consumption rate per sec {}", consRatePerSec);
 
             if (commit) {
