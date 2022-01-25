@@ -21,7 +21,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
 
     public LagBasedPartitionAssignor() {
 
-        LOGGER.info("my consumption rate {}", KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer);
+        //LOGGER.info("my consumption rate {}", KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer);
     }
 
     private Properties consumerGroupProps;
@@ -117,7 +117,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
     List<Double> computeConsumptionRate(){
         List<Double> rates = new ArrayList<>(memberAssignment.size());
         for(int i=0; i < memberAssignment.size(); i++ ) {
-            rates.add(KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer);
+           // rates.add(KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer);
         }
         return rates;
     }
@@ -125,7 +125,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
     @Override
     public ByteBuffer subscriptionUserData(Set<String> topics) {
 
-        double cr = KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer;
+        //double cr = KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer;
 
         if (memberAssignment == null)
             return null;
