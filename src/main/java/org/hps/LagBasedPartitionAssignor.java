@@ -253,8 +253,6 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
 
 
 
-
-
     private static void assignTopic(
             final Map<String, List<TopicPartition>> assignment,
             final String topic,
@@ -322,10 +320,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
             assignment.get(memberId).add(p);
             consumerTotalLags.put(memberId, consumerTotalLags.getOrDefault(memberId, 0L) + partition.getLag());
             consumerTotalPartitions.put(memberId, consumerTotalPartitions.getOrDefault(memberId, 0) + 1);
-           /*  if(!MonitoringThread.firstIteration) {
-                 LOGGER.info("Partition P {} has the following arrival rate {}", p, MonitoringThread.partitionArrivalrate.get(p));
-                 LOGGER.info("Partition P {} has the following consumption rate {}", p, MonitoringThread.partitionConsumptionRate.get(p));
-             }*/
+
 
 
             LOGGER.info(
