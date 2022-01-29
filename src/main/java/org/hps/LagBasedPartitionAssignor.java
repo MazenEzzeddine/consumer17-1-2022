@@ -19,9 +19,9 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LagBasedPartitionAssignor.class);
 
-    public LagBasedPartitionAssignor() {
 
-        //LOGGER.info("my consumption rate {}", KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer);
+    public LagBasedPartitionAssignor() {
+        LOGGER.info("my consumption rate {}",     ConsumerThread.maxConsumptionRatePerConsumer1/*KafkaConsumerTestAssignor.maxConsumptionRatePerConsumer*/);
     }
 
     private Properties consumerGroupProps;
@@ -34,7 +34,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
     static final String TOPIC_KEY_NAME = "topic";
     static final String PARTITIONS_KEY_NAME = "partitions";
     static final String PARTITIONS_KEY_RATE = "rate";
-   // static final String MAX_CONSUMPTION_RATE = "maxConsumptionRate";
+    static final String MAX_CONSUMPTION_RATE = "maxConsumptionRate";
 
 
     private static final String GENERATION_KEY_NAME = "generation";
@@ -43,13 +43,13 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
             new Field(TOPIC_KEY_NAME, Type.STRING),
             new Field(PARTITIONS_KEY_NAME, new ArrayOf(Type.INT32)),
             new Field(PARTITIONS_KEY_RATE, new ArrayOf(Type.FLOAT64))
-            //new Field(MAX_CONSUMPTION_RATE, Type.FLOAT64)
             );
     static final Schema STICKY_ASSIGNOR_USER_DATA_V0 = new Schema(
             new Field(TOPIC_PARTITIONS_KEY_NAME, new ArrayOf(TOPIC_ASSIGNMENT)));
     private static final Schema STICKY_ASSIGNOR_USER_DATA_V1 = new Schema(
             new Field(TOPIC_PARTITIONS_KEY_NAME, new ArrayOf(TOPIC_ASSIGNMENT)),
-            new Field(GENERATION_KEY_NAME, Type.INT32));
+            new Field(GENERATION_KEY_NAME, Type.INT32),
+            new Field(MAX_CONSUMPTION_RATE, Type.FLOAT64));
 
     private List<TopicPartition> memberAssignment = null;
     private int generation = DEFAULT_GENERATION; // consumer group generation
@@ -61,7 +61,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
     protected MemberData memberData(Subscription subscription) {
         ByteBuffer userData = subscription.userData();
         if (userData == null || !userData.hasRemaining()) {
-            return new MemberData(Collections.emptyList(), Collections.emptyList(),  /*0.0d,*/ Optional.empty());
+            return new MemberData(Collections.emptyList(), Collections.emptyList(),  0.0d, Optional.empty());
         }
         return deserializeTopicPartitionAssignment(userData);
     }
@@ -79,7 +79,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
                 struct = STICKY_ASSIGNOR_USER_DATA_V0.read(copy);
             } catch (Exception e2) {
                 // ignore the consumer's previous assignment if it cannot be parsed
-                return new MemberData(Collections.emptyList(),Collections.emptyList()/*, 0.0d*/,Optional.of(DEFAULT_GENERATION));
+                return new MemberData(Collections.emptyList(),Collections.emptyList(), 0.0d,Optional.of(DEFAULT_GENERATION));
             }
         }
 
@@ -97,16 +97,21 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
                 partitions.add(new TopicPartition(topic, partition));
             }
 
-            for (Object partitionObj : assignment.getArray(PARTITIONS_KEY_RATE)) {
+         /*   for (Object partitionObj : assignment.getArray(PARTITIONS_KEY_RATE)) {
                 Double rate = (Double) partitionObj;
                 rates.add(rate);
                 LOGGER.info( "rate is {}", rate);
-            }
+            }*/
+
+
+            LOGGER.info( "Maximum rate is {}", struct.getDouble(MAX_CONSUMPTION_RATE));
         }
         //Double maxConsumptionRatePerConsumer  = struct.getDouble(MAX_CONSUMPTION_RATE);
         // make sure this is backward compatible
         Optional<Integer> generation = struct.hasField(GENERATION_KEY_NAME) ? Optional.of(struct.getInt(GENERATION_KEY_NAME)) : Optional.empty();
-        return new MemberData(partitions, rates, /*maxConsumptionRatePerConsumer,*/ generation);
+        Double maxRate = struct.hasField(MAX_CONSUMPTION_RATE) ? struct.getDouble(MAX_CONSUMPTION_RATE) : 0.0;
+
+        return new MemberData(partitions, rates, maxRate, generation);
     }
 
 
@@ -131,7 +136,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
             return null;
         List<Double> rates = computeConsumptionRate();
 
-        return serializeTopicPartitionAssignment(new MemberData(memberAssignment, rates, /*cr,*/ Optional.of(generation)));
+        return serializeTopicPartitionAssignment(new MemberData(memberAssignment, rates, ConsumerThread.maxConsumptionRatePerConsumer1, Optional.of(generation)));
 
     }
 
@@ -145,12 +150,14 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
             topicAssignment.set(TOPIC_KEY_NAME, topicEntry.getKey());
             topicAssignment.set(PARTITIONS_KEY_NAME, topicEntry.getValue().toArray());
             topicAssignment.set(PARTITIONS_KEY_RATE, memberData.rates.toArray());
-           // topicAssignment.set(MAX_CONSUMPTION_RATE, memberData.maxConsumptionRate);
+            //topicAssignment.set(MAX_CONSUMPTION_RATE, 100.0/*memberData.maxConsumptionRate*/);
             topicAssignments.add(topicAssignment);
         }
         struct.set(TOPIC_PARTITIONS_KEY_NAME, topicAssignments.toArray());
         if (memberData.generation.isPresent())
             struct.set(GENERATION_KEY_NAME, memberData.generation.get());
+        struct.set(MAX_CONSUMPTION_RATE, memberData.maxConsumptionRate);
+
         ByteBuffer buffer = ByteBuffer.allocate(STICKY_ASSIGNOR_USER_DATA_V1.sizeOf(struct));
         STICKY_ASSIGNOR_USER_DATA_V1.write(buffer, struct);
         buffer.flip();
@@ -218,7 +225,7 @@ public class LagBasedPartitionAssignor extends AbstractAssignor implements Confi
              LOGGER.info("partition  {} - {}", tp, tp.partition());
 
          }
-        // LOGGER.info("MaxConsumptionRate for {}", md.maxConsumptionRate);
+        LOGGER.info("MaxConsumptionRate for {}", md.maxConsumptionRate);
 
 
      }

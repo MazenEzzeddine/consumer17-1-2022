@@ -1,6 +1,6 @@
 package org.hps;
 
-import com.google.protobuf.Empty;
+//import com.google.protobuf.Empty;
 import io.grpc.stub.StreamObserver;
 
 import org.apache.logging.log4j.LogManager;
@@ -11,8 +11,8 @@ public class RateServiceImpl extends RateServiceGrpc.RateServiceImplBase {
     private static final Logger log = LogManager.getLogger(RateServiceImpl.class);
 
     @Override
-    public void consumptionRate(Empty request, StreamObserver<RateResponse> responseObserver) {
-        log.info("received new rate request");
+    public void consumptionRate(RateRequest request, StreamObserver<RateResponse> responseObserver) {
+        log.info("received new rate request {}", request.getRaterequest());
         RateResponse rate = RateResponse.newBuilder()
                 .setRate(ConsumerThread.maxConsumptionRatePerConsumer)
                         .build();

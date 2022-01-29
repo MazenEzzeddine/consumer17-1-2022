@@ -16,6 +16,8 @@ public class ConsumerThread implements Runnable {
     private static final Logger log = LogManager.getLogger(KafkaConsumerTestAssignor.class);
     public static KafkaConsumer<String, Customer> consumer = null;
     static float maxConsumptionRatePerConsumer = 100.0f;
+    static Double maxConsumptionRatePerConsumer1 = 100.0d;
+
 
 
     @Override

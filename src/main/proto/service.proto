@@ -6,20 +6,20 @@ option java_multiple_files=true;
 
 option java_package="org.hps";
 
-import "google/protobuf/empty.proto";
+
+service RateService{
+  rpc consumptionRate (RateRequest) returns (RateResponse) {};
+}
 
 
-
-
-/*message RateRequest {
-  string rate =1;
-}*/
 
 message RateResponse {
   float rate =1;
 }
 
-
-service RateService{
-  rpc consumptionRate (google.protobuf.Empty) returns (RateResponse) {};
+message RateRequest {
+  string raterequest = 1;
 }
+
+
+
