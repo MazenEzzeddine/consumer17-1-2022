@@ -76,7 +76,7 @@ public class ConsumerThread implements Runnable {
             Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
 
             maxConsumptionRatePerConsumer = ((float)records.count()/
-                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling));
+                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling))*1000.0f;
             maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
 
         }
