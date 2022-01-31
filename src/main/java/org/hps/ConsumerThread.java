@@ -18,6 +18,10 @@ public class ConsumerThread implements Runnable {
     static float maxConsumptionRatePerConsumer = 100.0f;
     static Double maxConsumptionRatePerConsumer1 = 100.0d;
 
+    //keep track of each of the vent processing latency for each event
+    //index 0 < 1, index 1, < 2   and so on
+    Long[] waitingTimes= new Long[10];
+
 
 
     @Override
@@ -38,6 +42,9 @@ public class ConsumerThread implements Runnable {
 
         while (receivedMsgs < config.getMessageCount()) {
             //  consumer.enforceRebalance();
+
+
+            Long timeBeforePolling= System.currentTimeMillis();
             ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
             //long start = System.currentTimeMillis();
             for (ConsumerRecord<String, Customer> record : records) {
@@ -59,13 +66,25 @@ public class ConsumerThread implements Runnable {
                 e.printStackTrace();
             }
 
+            getProcessingLatencyForEachEvent(records);
+
 
             if (commit) {
                 consumer.commitSync();
             }
 
+            Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
+
+            maxConsumptionRatePerConsumer = ((float)records.count()/
+                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling));
+            maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
 
         }
         log.info("Received {} messages", receivedMsgs);
+    }
+
+
+    private void getProcessingLatencyForEachEvent(ConsumerRecords<String, Customer> records) {
+
     }
 }
