@@ -58,13 +58,15 @@ public class ConsumerThread implements Runnable {
                         log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
                     }
                 }
+
+                try {
+                    Thread.sleep(Long.parseLong(config.getSleep()));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
             }
 
-            try {
-                Thread.sleep(Long.parseLong(config.getSleep()));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
 
             getProcessingLatencyForEachEvent(records);
 
