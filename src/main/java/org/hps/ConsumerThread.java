@@ -15,14 +15,11 @@ import java.util.Properties;
 public class ConsumerThread implements Runnable {
     private static final Logger log = LogManager.getLogger(KafkaConsumerTestAssignor.class);
     public static KafkaConsumer<String, Customer> consumer = null;
-    static float maxConsumptionRatePerConsumer = 100.0f;
-    static Double maxConsumptionRatePerConsumer1 = 100.0d;
-
+    static float maxConsumptionRatePerConsumer = 0.0f;
+    static Double maxConsumptionRatePerConsumer1 = 0.0d;
     //keep track of each of the vent processing latency for each event
     //index 0 < 1, index 1, < 2   and so on
     Long[] waitingTimes= new Long[10];
-
-
 
     @Override
     public void run() {
@@ -30,23 +27,17 @@ public class ConsumerThread implements Runnable {
         log.info(KafkaConsumerConfig.class.getName() + ": {}", config.toString());
         Properties props = KafkaConsumerConfig.createProperties(config);
         int receivedMsgs = 0;
-        // props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, StickyAssignor.class.getName());
-        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, LagBasedPartitionAssignor.class.getName());
+        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, BinPackPartitionAssignor.class.getName());
         //props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
+        // props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, StickyAssignor.class.getName());
         boolean commit = !Boolean.parseBoolean(config.getEnableAutoCommit());
         consumer = new KafkaConsumer<String, Customer>(props);
         consumer.subscribe(Collections.singletonList(config.getTopic()));
         log.info("Subscribed to topic {}", config.getTopic());
 
-        Long sleep;
-
-        while (receivedMsgs < config.getMessageCount()) {
-            //  consumer.enforceRebalance();
-
-
+        while (true) {
             Long timeBeforePolling= System.currentTimeMillis();
             ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-            //long start = System.currentTimeMillis();
             for (ConsumerRecord<String, Customer> record : records) {
                 log.info("Received message:");
                 log.info("\tpartition: {}", record.partition());
@@ -58,31 +49,23 @@ public class ConsumerThread implements Runnable {
                         log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
                     }
                 }
-
                 try {
                     Thread.sleep(Long.parseLong(config.getSleep()));
+                    log.info("Sleeping for {}", config.getSleep());
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
             }
-
-
-            getProcessingLatencyForEachEvent(records);
-
-
+            //getProcessingLatencyForEachEvent(records);
             if (commit) {
-                consumer.commitSync();
-            }
-
+                consumer.commitSync();}
+            log.info("In this poll, received {} events", records.count());
             Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
-
             maxConsumptionRatePerConsumer = ((float)records.count()/
-                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling))*1000.0f;
+                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling)) * 1000.0f;
             maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
-
+            log.info("maxConsumptionRatePerConsumer1 in this poll {}", maxConsumptionRatePerConsumer1);
         }
-        log.info("Received {} messages", receivedMsgs);
     }
 
 

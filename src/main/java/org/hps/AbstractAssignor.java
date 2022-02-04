@@ -22,14 +22,12 @@ public abstract class AbstractAssignor implements ConsumerPartitionAssignor {
     public static final class MemberData {
         public final List<TopicPartition> partitions;
         public final Optional<Integer> generation;
-        public final List<Double> rates;
         public final Double maxConsumptionRate;
 
-
-        public MemberData(List<TopicPartition> partitions, List<Double> rates, Double maxConsumptionRate, Optional<Integer> generation) {
+        public MemberData(List<TopicPartition> partitions, Double maxConsumptionRate,
+                          Optional<Integer> generation) {
             this.partitions = partitions;
             this.generation = generation;
-            this.rates = rates;
             this.maxConsumptionRate = maxConsumptionRate;
         }
     }

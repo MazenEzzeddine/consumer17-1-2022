@@ -1,17 +1,15 @@
+
+
+
 syntax= "proto3";
-
 package org.hps;
-
 option java_multiple_files=true;
-
 option java_package="org.hps";
 
 
 service RateService{
   rpc consumptionRate (RateRequest) returns (RateResponse) {};
 }
-
-
 
 message RateResponse {
   float rate =1;

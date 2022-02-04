@@ -10,8 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
-
-
 public class ServerThread  implements Runnable{
     private static final Logger log = LogManager.getLogger(ServerThread.class);
 
