@@ -50,6 +50,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     private List<TopicPartition> memberAssignment = null;
     private int generation = DEFAULT_GENERATION; // consumer group generation
 
+    private static Map<String, Double> memberToRate = null;
+
 
 
 
@@ -156,9 +158,13 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     @Override
     public GroupAssignment assign(Cluster metadata, GroupSubscription subscriptions) {
 
+
+
         if (metadataConsumer == null) {
             metadataConsumer = new KafkaConsumer<>(metadataConsumerProps);
         }
+
+        memberToRate = new HashMap<>();
 
 
 
@@ -167,6 +173,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         for (Map.Entry<String, Subscription> subscriptionEntry : subscriptions.groupSubscription().entrySet()) {
             printPreviousAssignments(subscriptionEntry.getKey(),  subscriptionEntry.getValue() );
             List<String> topics = subscriptionEntry.getValue().topics();
+
+
 
             //LOGGER.info("maximum consumption rate is {}", );
             allSubscribedTopics.addAll(topics);
@@ -185,16 +193,12 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     }
 
 
-     void printPreviousAssignments( String memberid, Subscription sub) {
+     void printPreviousAssignments(String memberid, Subscription sub) {
+        LOGGER.info("inside");
 
         MemberData md =  memberData(sub);
-         LOGGER.info("Here is the previous Assignment for the member {}", memberid );
-         for(TopicPartition tp: md.partitions) {
-             LOGGER.info("partition  {} - {}", tp, tp.partition());
-
-         }
+        memberToRate.put(memberid,md.maxConsumptionRate);
         LOGGER.info("MaxConsumptionRate for {}", md.maxConsumptionRate);
-
      }
 
 
@@ -237,7 +241,9 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         // Track total lag assigned to each consumer (for the current topic)
         final Map<String, Long> consumerTotalLags = new HashMap<>(consumers.size());
         for (String memberId : consumers) {
-            consumerTotalLags.put(memberId, 0L);}
+            consumerTotalLags.put(memberId, 0L);
+            LOGGER.info("member id {} has the following rate {}", memberId, memberToRate.get(memberId));
+        }
         // Track total number of partitions assigned to each consumer (for the current topic)
         final Map<String, Integer> consumerTotalPartitions = new HashMap<>(consumers.size());
         for (String memberId : consumers) {
