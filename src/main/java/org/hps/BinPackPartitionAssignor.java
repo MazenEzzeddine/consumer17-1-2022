@@ -21,7 +21,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
 
 
     public BinPackPartitionAssignor() {
-        LOGGER.info("my consumption rate {}",     ConsumerThread.maxConsumptionRatePerConsumer1);
     }
     private Properties consumerGroupProps;
     private Properties metadataConsumerProps;
@@ -194,11 +193,10 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
 
 
      void printPreviousAssignments(String memberid, Subscription sub) {
-        LOGGER.info("inside");
 
         MemberData md =  memberData(sub);
         memberToRate.put(memberid,md.maxConsumptionRate);
-        LOGGER.info("MaxConsumptionRate for {}", md.maxConsumptionRate);
+        LOGGER.info("MaxConsumptionRate {} for {}", memberid, md.maxConsumptionRate);
      }
 
 
@@ -215,7 +213,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         //for each topic assign call assigntopic to perform lag-aware assignment per topic
         final Map<String, List<String>> consumersPerTopic = consumersPerTopic(subscriptions);
         for (Map.Entry<String, List<String>> topicEntry : consumersPerTopic.entrySet()) {
-            assignTopic(
+            assignTopicBinPack(
                     assignment,
                     //topic
                     topicEntry.getKey(),
@@ -280,6 +278,118 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             assignment.get(memberId).add(p);
             consumerTotalLags.put(memberId, consumerTotalLags.getOrDefault(memberId, 0L) + partition.getLag());
             consumerTotalPartitions.put(memberId, consumerTotalPartitions.getOrDefault(memberId, 0) + 1);
+            LOGGER.info(
+                    "Assigned partition {}-{} to consumer {}.  partition_lag={}, consumer_current_total_lag={}",
+                    partition.getTopic(),
+                    partition.getPartition(),
+                    memberId,
+                    partition.getLag(),
+                    consumerTotalLags.get(memberId));
+        }
+    }
+
+
+
+
+    private static void assignTopicBinPack(
+            final Map<String, List<TopicPartition>> assignment,
+            final String topic,
+            final List<String> consumers,
+            final List<TopicPartitionLag> partitionLags) {
+        if (consumers.isEmpty()) {
+            return;
+        }
+        // Track total lag assigned to each consumer (for the current topic)
+        final Map<String, Long> consumerTotalLags = new HashMap<>(consumers.size());
+        final Map<String, Integer> consumerTotalPartitions = new HashMap<>(consumers.size());
+        final Map<String, Long> consumerRemainingAllowableLag = new HashMap<>(consumers.size());
+        final Map<String, Long> consumerAllowableLag = new HashMap<>(consumers.size());
+
+        Double averageRate;
+        Double sum = 0d;
+        Double count = 0d;
+        for (String memberId : consumers) {
+            consumerTotalLags.put(memberId, 0L);
+            LOGGER.info("member id {} has the following rate {}", memberId, memberToRate.get(memberId));
+            //WSLA=1
+            if(memberToRate.get(memberId).longValue() != 0){
+                sum +=  memberToRate.get(memberId) ;
+                count++;
+            }
+            consumerAllowableLag.put(memberId, memberToRate.get(memberId).longValue());
+            LOGGER.info("Allowable lag for member id {} is {} ", memberId , consumerAllowableLag.get(memberId));
+        }
+        //check when for div by zero
+        averageRate = sum/count;
+        LOGGER.info("The average consumption rate over all non zero consumers is {}", averageRate);
+
+
+        for (String memberId : consumers) {
+
+            if(memberToRate.get(memberId).longValue() == 0){
+              LOGGER.info("since member id {} has a consumption rate of zero assigning it the average {}",
+                      memberId, averageRate);
+              memberToRate.put(memberId,averageRate);
+              //similarly for the allowable lag
+              consumerAllowableLag.put(memberId, memberToRate.get(memberId).longValue());
+              LOGGER.info("Hence, Allowable lag for member id {} is {} ", memberId , consumerAllowableLag.get(memberId));
+
+            }
+        }
+
+        // Track total number of partitions assigned to each consumer (for the current topic)
+
+
+        for (String memberId : consumers) {
+            consumerTotalPartitions.put(memberId, 0);
+            consumerRemainingAllowableLag.put(memberId, consumerAllowableLag.get(memberId));
+        }
+
+
+        // Assign partitions in descending order of lag, then ascending by partition
+        //First fit decreasing
+        partitionLags.sort((p1, p2) -> {
+            // If lag is equal, lowest partition id first
+            if (p1.getLag() == p2.getLag()) {
+                return Integer.compare(p1.getPartition(), p2.getPartition());
+            }
+            // Highest lag first
+            return Long.compare(p2.getLag(), p1.getLag());
+        });
+
+        for (TopicPartitionLag partition : partitionLags) {
+            // Assign to the consumer with least number of partitions, then smallest total lag, then smallest id
+            // returns the consumer with lowest assigned partitions, if all assigned partitions equal returns the min total lag
+            final String memberId = Collections
+                    .min(consumerTotalLags.entrySet(), (c1, c2) -> {
+                        // Lowest partition count first
+                        final int comparePartitionCount = Integer.compare(consumerTotalPartitions.get(c1.getKey()),
+                                consumerTotalPartitions.get(c2.getKey()));
+                        if (comparePartitionCount != 0) {
+                            return comparePartitionCount;}
+                        // If partition count is equal, lowest total lag first
+                        final int compareTotalLags = Long.compare(c1.getValue(), c2.getValue());
+                        if (compareTotalLags != 0) {
+                            return compareTotalLags;}
+                        // If total lag is equal, lowest consumer id first
+                        return c1.getKey().compareTo(c2.getKey());
+                    }).getKey();
+
+            //we currently have the the consumer with the lowest lag
+
+            LOGGER.info("Assigning the consumer {} with the lowest lag {} to the partition with the highest lag {}",
+                    memberId, consumerTotalLags.get(memberId), partition.lag);
+
+            TopicPartition p =  new TopicPartition(partition.getTopic(), partition.getPartition());
+            assignment.get(memberId).add(p);
+            consumerTotalLags.put(memberId, consumerTotalLags.getOrDefault(memberId, 0L) + partition.getLag());
+            consumerTotalPartitions.put(memberId, consumerTotalPartitions.getOrDefault(memberId, 0) + 1);
+            consumerRemainingAllowableLag.put(memberId, consumerAllowableLag.get(memberId)
+                    - consumerTotalLags.get(memberId));
+            LOGGER.info("The remaining allowable lag for consumer {} is {}",
+                    memberId, consumerAllowableLag.get(memberId) - consumerTotalLags.get(memberId));
+            LOGGER.info("The remaining allowable lag for consumer {} is {}",
+                    memberId, consumerRemainingAllowableLag.get(memberId));
             LOGGER.info(
                     "Assigned partition {}-{} to consumer {}.  partition_lag={}, consumer_current_total_lag={}",
                     partition.getTopic(),
