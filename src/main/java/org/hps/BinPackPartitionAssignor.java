@@ -322,10 +322,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         //check when for div by zero
         averageRate = sum/count;
         LOGGER.info("The average consumption rate over all non zero consumers is {}", averageRate);
-
-
         for (String memberId : consumers) {
-
             if(memberToRate.get(memberId).longValue() == 0){
               LOGGER.info("since member id {} has a consumption rate of zero assigning it the average {}",
                       memberId, averageRate);

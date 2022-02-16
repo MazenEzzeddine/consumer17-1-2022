@@ -1,8 +1,10 @@
 package org.hps;
 
 
-
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.header.Header;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,10 +18,12 @@ public class ConsumerThread implements Runnable {
     private static final Logger log = LogManager.getLogger(KafkaConsumerTestAssignor.class);
     public static KafkaConsumer<String, Customer> consumer = null;
     static float maxConsumptionRatePerConsumer = 0.0f;
+    static float ConsumptionRatePerConsumerInThisPoll = 0.0f;
+
     static Double maxConsumptionRatePerConsumer1 = 0.0d;
     //keep track of each of the vent processing latency for each event
     //index 0 < 1, index 1, < 2   and so on
-    Long[] waitingTimes= new Long[10];
+    Long[] waitingTimes = new Long[10];
 
     @Override
     public void run() {
@@ -36,35 +40,46 @@ public class ConsumerThread implements Runnable {
         log.info("Subscribed to topic {}", config.getTopic());
 
         while (true) {
-            Long timeBeforePolling= System.currentTimeMillis();
-            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-            for (ConsumerRecord<String, Customer> record : records) {
-                log.info("Received message:");
-                log.info("\tpartition: {}", record.partition());
-                log.info("\toffset: {}", record.offset());
-                log.info("\tvalue: {}", record.value().toString());
-                if (record.headers() != null) {
-                    log.info("\theaders: ");
-                    for (Header header : record.headers()) {
-                        log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
+            Long timeBeforePolling = System.currentTimeMillis();
+            //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
+            if (records.count() != 0) {
+                for (ConsumerRecord<String, Customer> record : records) {
+                    log.info("Received message:");
+                    log.info("\tpartition: {}", record.partition());
+                    log.info("\toffset: {}", record.offset());
+                    log.info("\tvalue: {}", record.value().toString());
+                    if (record.headers() != null) {
+                        log.info("\theaders: ");
+                        for (Header header : record.headers()) {
+                            log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
+                        }
+                    }
+                    try {
+                        Thread.sleep(Long.parseLong(config.getSleep()));
+                        log.info("Sleeping for {}", config.getSleep());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
-                try {
-                    Thread.sleep(Long.parseLong(config.getSleep()));
-                    log.info("Sleeping for {}", config.getSleep());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                //getProcessingLatencyForEachEvent(records);
+                if (commit) {
+                    consumer.commitSync();
                 }
+                log.info("In this poll, received {} events", records.count());
+                Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
+                ConsumptionRatePerConsumerInThisPoll = ((float) records.count() /
+                        (float) (timeAfterPollingProcessingAndCommit - timeBeforePolling)) * 1000.0f;
+
+                if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
+                    maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
+                }
+
+                maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
+
+                log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
+                log.info("maxConsumptionRatePerConsumer1  {}", maxConsumptionRatePerConsumer1);
             }
-            //getProcessingLatencyForEachEvent(records);
-            if (commit) {
-                consumer.commitSync();}
-            log.info("In this poll, received {} events", records.count());
-            Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
-            maxConsumptionRatePerConsumer = ((float)records.count()/
-                    (float)(timeAfterPollingProcessingAndCommit - timeBeforePolling)) * 1000.0f;
-            maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
-            log.info("maxConsumptionRatePerConsumer1 in this poll {}", maxConsumptionRatePerConsumer1);
         }
     }
 
