@@ -79,7 +79,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             }
         }
         List<TopicPartition> partitions = new ArrayList<>();
-        List<Double> rates = new ArrayList<>();
+       // List<Double> rates = new ArrayList<>();
         for (Object structObj : struct.getArray(TOPIC_PARTITIONS_KEY_NAME)) {
             Struct assignment = (Struct) structObj;
             String topic = assignment.getString(TOPIC_KEY_NAME);
