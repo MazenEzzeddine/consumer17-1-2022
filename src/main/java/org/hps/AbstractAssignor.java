@@ -76,5 +76,4 @@ public abstract class AbstractAssignor implements ConsumerPartitionAssignor {
                     + "]";
         }
     }
-
 }

@@ -13,7 +13,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-
 public class ConsumerThread implements Runnable {
     private static final Logger log = LogManager.getLogger(KafkaConsumerTestAssignor.class);
     public static KafkaConsumer<String, Customer> consumer = null;
@@ -38,6 +37,7 @@ public class ConsumerThread implements Runnable {
         consumer = new KafkaConsumer<String, Customer>(props);
         consumer.subscribe(Collections.singletonList(config.getTopic()));
         log.info("Subscribed to topic {}", config.getTopic());
+
 
         while (true) {
             Long timeBeforePolling = System.currentTimeMillis();
@@ -74,9 +74,7 @@ public class ConsumerThread implements Runnable {
                 if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
                     maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
                 }
-
                 maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
-
                 log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
                 log.info("maxConsumptionRatePerConsumer1  {}", maxConsumptionRatePerConsumer1);
             }

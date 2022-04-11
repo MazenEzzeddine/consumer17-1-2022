@@ -64,8 +64,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         return deserializeTopicPartitionAssignment(userData);
     }
 
-
-
     private static MemberData deserializeTopicPartitionAssignment(ByteBuffer buffer) {
         Struct struct;
         ByteBuffer copy = buffer.duplicate();
@@ -80,10 +78,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                 return new MemberData(Collections.emptyList(), 0.0d,Optional.of(DEFAULT_GENERATION));
             }
         }
-
         List<TopicPartition> partitions = new ArrayList<>();
         List<Double> rates = new ArrayList<>();
-
         for (Object structObj : struct.getArray(TOPIC_PARTITIONS_KEY_NAME)) {
             Struct assignment = (Struct) structObj;
             String topic = assignment.getString(TOPIC_KEY_NAME);
@@ -91,13 +87,11 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                 Integer partition = (Integer) partitionObj;
                 partitions.add(new TopicPartition(topic, partition));
             }
-
             LOGGER.info( "Maximum rate is {}", struct.getDouble(MAX_CONSUMPTION_RATE));
         }
-
-        Optional<Integer> generation = struct.hasField(GENERATION_KEY_NAME) ? Optional.of(struct.getInt(GENERATION_KEY_NAME)) : Optional.empty();
+        Optional<Integer> generation = struct.hasField(GENERATION_KEY_NAME) ?
+                Optional.of(struct.getInt(GENERATION_KEY_NAME)) : Optional.empty();
         Double maxRate = struct.hasField(MAX_CONSUMPTION_RATE) ? struct.getDouble(MAX_CONSUMPTION_RATE) : 0.0;
-
         return new MemberData(partitions, maxRate, generation);
     }
 
@@ -113,7 +107,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         return serializeTopicPartitionAssignment(new MemberData(memberAssignment,
                 ConsumerThread.maxConsumptionRatePerConsumer1, Optional.of(generation)));
     }
-
 
     // visible for testing
     static ByteBuffer serializeTopicPartitionAssignment(MemberData memberData) {
@@ -157,29 +150,19 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     @Override
     public GroupAssignment assign(Cluster metadata, GroupSubscription subscriptions) {
 
-
-
         if (metadataConsumer == null) {
             metadataConsumer = new KafkaConsumer<>(metadataConsumerProps);
         }
-
         memberToRate = new HashMap<>();
-
-
-
         final Set<String> allSubscribedTopics = new HashSet<>();
         final Map<String, List<String>> topicSubscriptions = new HashMap<>();
         for (Map.Entry<String, Subscription> subscriptionEntry : subscriptions.groupSubscription().entrySet()) {
             printPreviousAssignments(subscriptionEntry.getKey(),  subscriptionEntry.getValue() );
             List<String> topics = subscriptionEntry.getValue().topics();
-
-
-
             //LOGGER.info("maximum consumption rate is {}", );
             allSubscribedTopics.addAll(topics);
             topicSubscriptions.put(subscriptionEntry.getKey(), topics);
         }
-
         final Map<String, List<TopicPartitionLag>> topicLags = readTopicPartitionLags(metadata, allSubscribedTopics);
         Map<String, List<TopicPartition>> rawAssignments = assign(topicLags, topicSubscriptions);
 
@@ -223,7 +206,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             );
         }
         return assignment;
-
     }
 
 
@@ -298,8 +280,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             final List<TopicPartitionLag> partitionLags) {
         if (consumers.isEmpty()) {
             return;
-        }
-        // Track total lag assigned to each consumer (for the current topic)
+        }// Track total lag assigned to each consumer (for the current topic)
         final Map<String, Long> consumerTotalLags = new HashMap<>(consumers.size());
         final Map<String, Integer> consumerTotalPartitions = new HashMap<>(consumers.size());
         final Map<String, Long> consumerRemainingAllowableLag = new HashMap<>(consumers.size());
@@ -335,13 +316,10 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         }
 
         // Track total number of partitions assigned to each consumer (for the current topic)
-
-
         for (String memberId : consumers) {
             consumerTotalPartitions.put(memberId, 0);
             consumerRemainingAllowableLag.put(memberId, consumerAllowableLag.get(memberId));
         }
-
 
         // Assign partitions in descending order of lag, then ascending by partition
         //First fit decreasing
@@ -353,7 +331,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             // Highest lag first
             return Long.compare(p2.getLag(), p1.getLag());
         });
-
         for (TopicPartitionLag partition : partitionLags) {
             // Assign to the consumer with least number of partitions, then smallest total lag, then smallest id
             // returns the consumer with lowest assigned partitions, if all assigned partitions equal returns the min total lag
@@ -371,9 +348,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                         // If total lag is equal, lowest consumer id first
                         return c1.getKey().compareTo(c2.getKey());
                     }).getKey();
-
             //we currently have the the consumer with the lowest lag
-
             LOGGER.info("Assigning the consumer {} with the lowest lag {} to the partition with the highest lag {}",
                     memberId, consumerTotalLags.get(memberId), partition.lag);
 
@@ -396,7 +371,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                     consumerTotalLags.get(memberId));
         }
     }
-
 
     private Map<String, List<TopicPartitionLag>> readTopicPartitionLags(
             final Cluster metadata,
@@ -448,7 +422,6 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             final long endOffset,
             final String autoOffsetResetMode
     ) {
-
         final long nextOffset;
         if (partitionMetadata != null) {
 
@@ -463,14 +436,11 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                 // assume earliest
                 nextOffset = beginOffset;
             }
-
         }
-
         // The max() protects against the unlikely case when reading the partition end offset fails
         // but reading the last committed offsets succeeds
         return Long.max(endOffset - nextOffset, 0L);
     }
-
 
     private static Map<String, List<String>> consumersPerTopic(Map<String, List<String>> subscriptions) {
 
