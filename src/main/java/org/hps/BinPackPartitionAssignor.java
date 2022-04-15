@@ -1,5 +1,7 @@
 package org.hps;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.Configurable;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 public class BinPackPartitionAssignor extends AbstractAssignor implements Configurable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BinPackPartitionAssignor.class);
+
+    private static boolean firstRebalancing = true;
 
 
     public BinPackPartitionAssignor() {
@@ -104,6 +108,10 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         if (memberAssignment == null)
             return null;
             //memberAssignment=Collections.emptyList();
+        //if you'd like to call the controller for arrival rates into partitions before the rebalancing
+        //add your code here
+        //TODO pre-rebalancing call to the controller
+        //TODO attention to modify as well member data
         return serializeTopicPartitionAssignment(new MemberData(memberAssignment,
                 ConsumerThread.maxConsumptionRatePerConsumer1, Optional.of(generation)));
     }
@@ -157,6 +165,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         final Set<String> allSubscribedTopics = new HashSet<>();
         final Map<String, List<String>> topicSubscriptions = new HashMap<>();
         for (Map.Entry<String, Subscription> subscriptionEntry : subscriptions.groupSubscription().entrySet()) {
+
+            //Here you can get any data from each consumer i.e., using it is subscription user data
             printPreviousAssignments(subscriptionEntry.getKey(),  subscriptionEntry.getValue() );
             List<String> topics = subscriptionEntry.getValue().topics();
             //LOGGER.info("maximum consumption rate is {}", );
@@ -164,6 +174,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             topicSubscriptions.put(subscriptionEntry.getKey(), topics);
         }
         final Map<String, List<TopicPartitionLag>> topicLags = readTopicPartitionLags(metadata, allSubscribedTopics);
+        //write a function to call the controller and get the assignment
         Map<String, List<TopicPartition>> rawAssignments = assign(topicLags, topicSubscriptions);
 
         // this class has maintains no user data, so just wrap the results
@@ -176,14 +187,13 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
 
 
      void printPreviousAssignments(String memberid, Subscription sub) {
-
         MemberData md =  memberData(sub);
         memberToRate.put(memberid,md.maxConsumptionRate);
         LOGGER.info("MaxConsumptionRate {} for {}", memberid, md.maxConsumptionRate);
      }
 
 
-
+    //for every consumer return the set of assigned partitions
     static Map<String, List<TopicPartition>> assign(
             Map<String, List<TopicPartitionLag>> partitionLagPerTopic,
             Map<String, List<String>> subscriptions
@@ -278,6 +288,19 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
             final String topic,
             final List<String> consumers,
             final List<TopicPartitionLag> partitionLags) {
+
+
+        if(firstRebalancing) {
+            LOGGER.info(" Not Calling the Controller for the assignment");
+            LOGGER.info(" Since this is the first rebalancing");
+
+            firstRebalancing = false;
+        } else {
+
+            LOGGER.info("Calling the Controller for the assignment");
+            callForAssignment();
+            LOGGER.info("successfully called the controller for the assignment");
+        }
         if (consumers.isEmpty()) {
             return;
         }// Track total lag assigned to each consumer (for the current topic)
@@ -353,6 +376,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                     memberId, consumerTotalLags.get(memberId), partition.lag);
 
             TopicPartition p =  new TopicPartition(partition.getTopic(), partition.getPartition());
+            //assigning the
             assignment.get(memberId).add(p);
             consumerTotalLags.put(memberId, consumerTotalLags.getOrDefault(memberId, 0L) + partition.getLag());
             consumerTotalPartitions.put(memberId, consumerTotalPartitions.getOrDefault(memberId, 0) + 1);
@@ -516,6 +540,41 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         long getLag() {
             return lag;
         }
+
+    }
+
+
+
+    private static void callForAssignment() {
+        ManagedChannel managedChannel = ManagedChannelBuilder.forAddress("assignmentservice", 5002)
+                .usePlaintext()
+                .build();
+
+        AssignmentServiceGrpc.AssignmentServiceBlockingStub assignmentServiceBlockingStub = AssignmentServiceGrpc.newBlockingStub(managedChannel);
+        AssignmentRequest request = AssignmentRequest.newBuilder().setRequest("Give me the Assignment plz").build();
+
+        System.out.println("connected to server ");
+        AssignmentResponse reply = assignmentServiceBlockingStub.getAssignment(request);
+
+
+
+
+
+        System.out.println("We have the following consumers");
+        for (Consumer c : reply.getConsumersList())
+            System.out.println(c.getId());
+
+        System.out.println("We have the following Assignmenet");
+
+        for (Consumer c : reply.getConsumersList()) {
+            System.out.println("Consumer has the following Assignment "+ c.getId() );
+            for(Partition p : c.getAssignedPartitionsList()) {
+                System.out.println("partition "+ p.getId() + " " + p.getArrivalRate() + " " + p.getLag() );
+
+            }
+        }
+
+
 
     }
 

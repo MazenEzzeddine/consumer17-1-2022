@@ -10,6 +10,8 @@ import java.util.StringTokenizer;
 public class KafkaConsumerConfig {
     private static final Logger log = LogManager.getLogger(KafkaConsumerConfig.class);
 
+
+
     private static final long DEFAULT_MESSAGES_COUNT = 10;
     private final String bootstrapServers;
     private final String topic;
@@ -20,6 +22,7 @@ public class KafkaConsumerConfig {
     private final String sleep;
     private final Long messageCount;
     private final String additionalConfig;
+
 
     public KafkaConsumerConfig(String bootstrapServers, String topic, String groupId, String clientRack, Long messageCount, String sleep,
                                 String additionalConfig) {

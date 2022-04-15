@@ -1,0 +1,36 @@
+
+
+syntax= "proto3";
+
+option java_multiple_files=true;
+
+option java_package="org.hps";
+
+
+
+
+message Partition {
+  int32 id=1;
+  int64 lag=2;
+  double arrivalRate=3;
+}
+
+
+message Consumer {
+  int32 id=1;
+  repeated Partition assignedPartitions=2;
+}
+
+
+message AssignmentRequest {
+  string request = 1;
+}
+
+
+message AssignmentResponse {
+  repeated Consumer consumers = 1;
+}
+
+service AssignmentService {
+  rpc getAssignment(AssignmentRequest) returns (AssignmentResponse) {}
+}
