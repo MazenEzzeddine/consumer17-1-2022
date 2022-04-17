@@ -41,9 +41,9 @@ public class ConsumerThread implements Runnable {
 
         while (true) {
             Long timeBeforePolling = System.currentTimeMillis();
-            //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
-            if (records.count() != 0) {
+            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+            //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(100));
+           /* if (records.count() != 0) {
                 for (ConsumerRecord<String, Customer> record : records) {
                     log.info("Received message:");
                     log.info("\tpartition: {}", record.partition());
@@ -55,28 +55,19 @@ public class ConsumerThread implements Runnable {
                             log.info("\t\tkey: {}, value: {}", header.key(), new String(header.value()));
                         }
                     }
-                    try {
-                        Thread.sleep(Long.parseLong(config.getSleep()));
-                        log.info("Sleeping for {}", config.getSleep());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+
+                }*/
                 //getProcessingLatencyForEachEvent(records);
                 if (commit) {
                     consumer.commitSync();
                 }
-                log.info("In this poll, received {} events", records.count());
-                Long timeAfterPollingProcessingAndCommit = System.currentTimeMillis();
-                ConsumptionRatePerConsumerInThisPoll = ((float) records.count() /
-                        (float) (timeAfterPollingProcessingAndCommit - timeBeforePolling)) * 1000.0f;
 
-                if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
-                    maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
-                }
-                maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
-                log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
-                log.info("maxConsumptionRatePerConsumer1  {}", maxConsumptionRatePerConsumer1);
+            //}
+            try {
+                Thread.sleep(Long.parseLong(config.getSleep()));
+                log.info("Sleeping for {}", config.getSleep());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

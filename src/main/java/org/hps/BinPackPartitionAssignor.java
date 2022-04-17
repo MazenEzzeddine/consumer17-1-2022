@@ -298,7 +298,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         } else {
 
             LOGGER.info("Calling the Controller for the assignment");
-            callForAssignment();
+           // callForAssignment();
             LOGGER.info("successfully called the controller for the assignment");
         }
         if (consumers.isEmpty()) {
