@@ -18,6 +18,10 @@ public class ConsumerThread implements Runnable {
     public static KafkaConsumer<String, Customer> consumer = null;
     static float maxConsumptionRatePerConsumer = 0.0f;
     static float ConsumptionRatePerConsumerInThisPoll = 0.0f;
+    static float averageRatePerConsumerForGrpc = 0.0f;
+
+    static long pollsSoFar = 0;
+
 
     static Double maxConsumptionRatePerConsumer1 = 0.0d;
     //keep track of each of the vent processing latency for each event
@@ -41,8 +45,9 @@ public class ConsumerThread implements Runnable {
 
         while (true) {
             Long timeBeforePolling = System.currentTimeMillis();
-            //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
+            ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+            pollsSoFar += 1;
+            //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
             if (records.count() != 0) {
                 for (ConsumerRecord<String, Customer> record : records) {
                     log.info("Received message:");
@@ -71,12 +76,15 @@ public class ConsumerThread implements Runnable {
                 ConsumptionRatePerConsumerInThisPoll = ((float) records.count() /
                         (float) (timeAfterPollingProcessingAndCommit - timeBeforePolling)) * 1000.0f;
 
+                averageRatePerConsumerForGrpc = averageRatePerConsumerForGrpc +
+                        (ConsumptionRatePerConsumerInThisPoll- averageRatePerConsumerForGrpc)/(float)(pollsSoFar);
+
                 if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
                     maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
                 }
-                maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(maxConsumptionRatePerConsumer));
+                maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(averageRatePerConsumerForGrpc));
                 log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
-                log.info("maxConsumptionRatePerConsumer1  {}", maxConsumptionRatePerConsumer1);
+                log.info("averageRatePerConsumerForGrpc  {}", averageRatePerConsumerForGrpc);
             }
         }
     }
