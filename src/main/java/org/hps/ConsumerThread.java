@@ -46,9 +46,9 @@ public class ConsumerThread implements Runnable {
         while (true) {
             Long timeBeforePolling = System.currentTimeMillis();
             ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-            pollsSoFar += 1;
             //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
             if (records.count() != 0) {
+                pollsSoFar += 1;
                 for (ConsumerRecord<String, Customer> record : records) {
                     log.info("Received message:");
                     log.info("\tpartition: {}", record.partition());
@@ -79,9 +79,9 @@ public class ConsumerThread implements Runnable {
                 averageRatePerConsumerForGrpc = averageRatePerConsumerForGrpc +
                         (ConsumptionRatePerConsumerInThisPoll- averageRatePerConsumerForGrpc)/(float)(pollsSoFar);
 
-                if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
+             /*   if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
                     maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
-                }
+                }*/
                 maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(averageRatePerConsumerForGrpc));
                 log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
                 log.info("averageRatePerConsumerForGrpc  {}", averageRatePerConsumerForGrpc);
