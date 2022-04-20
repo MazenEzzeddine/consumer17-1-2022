@@ -42,13 +42,14 @@ public class ConsumerThread implements Runnable {
         consumer.subscribe(Collections.singletonList(config.getTopic()));
         log.info("Subscribed to topic {}", config.getTopic());
 
+        int warmup = 0;
 
         while (true) {
             Long timeBeforePolling = System.currentTimeMillis();
             //ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
             ConsumerRecords<String, Customer> records = consumer.poll(Duration.ofMillis(0));
             if (records.count() != 0) {
-                pollsSoFar += 1;
+
                 for (ConsumerRecord<String, Customer> record : records) {
                     log.info("Received message:");
                     log.info("\tpartition: {}", record.partition());
@@ -78,13 +79,17 @@ public class ConsumerThread implements Runnable {
 
 
 
+              //if (warmup > 10) {
+                 pollsSoFar += 1;
+                  averageRatePerConsumerForGrpc = averageRatePerConsumerForGrpc +
+                          (ConsumptionRatePerConsumerInThisPoll - averageRatePerConsumerForGrpc) / (float) (pollsSoFar);
 
-              averageRatePerConsumerForGrpc = averageRatePerConsumerForGrpc +
-                        (ConsumptionRatePerConsumerInThisPoll- averageRatePerConsumerForGrpc)/(float)(pollsSoFar);
-
-                if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
-                    maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
-                }
+                  if (maxConsumptionRatePerConsumer < ConsumptionRatePerConsumerInThisPoll) {
+                      maxConsumptionRatePerConsumer = ConsumptionRatePerConsumerInThisPoll;
+                  }
+            //  } else {
+                 // warmup++;
+              //}
                 maxConsumptionRatePerConsumer1 = Double.parseDouble(String.valueOf(averageRatePerConsumerForGrpc));
                 log.info("ConsumptionRatePerConsumerInThisPoll in this poll {}", ConsumptionRatePerConsumerInThisPoll);
                 log.info("maxConsumptionRatePerConsumer {}", maxConsumptionRatePerConsumer);

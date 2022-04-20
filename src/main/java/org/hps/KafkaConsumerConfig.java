@@ -21,7 +21,8 @@ public class KafkaConsumerConfig {
     private final Long messageCount;
     private final String additionalConfig;
 
-    public KafkaConsumerConfig(String bootstrapServers, String topic, String groupId, String clientRack, Long messageCount, String sleep,
+    public KafkaConsumerConfig(String bootstrapServers, String topic, String groupId,
+                               String clientRack, Long messageCount, String sleep,
                                 String additionalConfig) {
         this.bootstrapServers = bootstrapServers;
         this.topic = topic;
@@ -38,7 +39,8 @@ public class KafkaConsumerConfig {
 
         String groupId = System.getenv("GROUP_ID");
         String clientRack = System.getenv("CLIENT_RACK") == null ? null : System.getenv("CLIENT_RACK");
-        Long messageCount = System.getenv("MESSAGE_COUNT") == null ? DEFAULT_MESSAGES_COUNT : Long.valueOf(System.getenv("MESSAGE_COUNT"));
+        Long messageCount = System.getenv("MESSAGE_COUNT") == null
+                ? DEFAULT_MESSAGES_COUNT : Long.valueOf(System.getenv("MESSAGE_COUNT"));
 
         String additionalConfig = System.getenv().getOrDefault("ADDITIONAL_CONFIG", "");
 
@@ -55,9 +57,11 @@ public class KafkaConsumerConfig {
         }
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, config.getAutoOffsetReset());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, config.getEnableAutoCommit());
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                "org.apache.kafka.common.serialization.StringDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, CustomerDeserializer.class.getName());
-       // props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+       // props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        // "org.apache.kafka.common.serialization.StringDeserializer");
 
 
         if (!config.getAdditionalConfig().isEmpty()) {

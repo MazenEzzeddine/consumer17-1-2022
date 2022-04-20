@@ -112,7 +112,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     static ByteBuffer serializeTopicPartitionAssignment(MemberData memberData) {
         Struct struct = new Struct(STICKY_ASSIGNOR_USER_DATA_V1);
         List<Struct> topicAssignments = new ArrayList<>();
-        for (Map.Entry<String, List<Integer>> topicEntry : CollectionUtils.groupPartitionsByTopic(memberData.partitions).entrySet()) {
+        for (Map.Entry<String, List<Integer>> topicEntry :
+                CollectionUtils.groupPartitionsByTopic(memberData.partitions).entrySet()) {
             Struct topicAssignment = new Struct(TOPIC_ASSIGNMENT);
             topicAssignment.set(TOPIC_KEY_NAME, topicEntry.getKey());
             topicAssignment.set(PARTITIONS_KEY_NAME, topicEntry.getValue().toArray());
@@ -156,15 +157,18 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         memberToRate = new HashMap<>();
         final Set<String> allSubscribedTopics = new HashSet<>();
         final Map<String, List<String>> topicSubscriptions = new HashMap<>();
-        for (Map.Entry<String, Subscription> subscriptionEntry : subscriptions.groupSubscription().entrySet()) {
+        for (Map.Entry<String, Subscription> subscriptionEntry :
+                subscriptions.groupSubscription().entrySet()) {
             printPreviousAssignments(subscriptionEntry.getKey(),  subscriptionEntry.getValue() );
             List<String> topics = subscriptionEntry.getValue().topics();
             //LOGGER.info("maximum consumption rate is {}", );
             allSubscribedTopics.addAll(topics);
             topicSubscriptions.put(subscriptionEntry.getKey(), topics);
         }
-        final Map<String, List<TopicPartitionLag>> topicLags = readTopicPartitionLags(metadata, allSubscribedTopics);
-        Map<String, List<TopicPartition>> rawAssignments = assign(topicLags, topicSubscriptions);
+        final Map<String, List<TopicPartitionLag>> topicLags =
+                readTopicPartitionLags(metadata, allSubscribedTopics);
+        Map<String, List<TopicPartition>> rawAssignments =
+                assign(topicLags, topicSubscriptions);
 
         // this class has maintains no user data, so just wrap the results
         Map<String, Assignment> assignments = new HashMap<>();
@@ -393,7 +397,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                 final Map<TopicPartition, Long> topicBeginOffsets = metadataConsumer.beginningOffsets(topicPartitions);
                 final Map<TopicPartition, Long> topicEndOffsets = metadataConsumer.endOffsets(topicPartitions);
                 //get last committed offset
-                Map<TopicPartition, OffsetAndMetadata> partitionMetadata = metadataConsumer.committed(new HashSet<>(topicPartitions));
+                Map<TopicPartition, OffsetAndMetadata> partitionMetadata =
+                        metadataConsumer.committed(new HashSet<>(topicPartitions));
                 // Determine lag for each partition
                 for (TopicPartition partition : topicPartitions) {
 
