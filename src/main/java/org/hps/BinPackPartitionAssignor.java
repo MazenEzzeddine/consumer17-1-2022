@@ -306,8 +306,23 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         } else {
 
             LOGGER.info("Calling the Controller for the assignment");
-            callForAssignment();
+            List<Consumer> ass = callForAssignment();
             LOGGER.info("successfully called the controller for the assignment");
+
+
+            //TODO needs further test is the assignment returned is ok
+            //TODO no need to run any further logic the assignmenet is returned by the Controller
+            //TODO we just shall respect it.
+           /* int consindex=0;
+            for (String memberId : consumers) {
+                List<Partition> partitions=ass.get(consindex).getAssignedPartitionsList();
+
+                for (Partition p : partitions){
+                    assignment.get(memberId).add(new TopicPartition(topic, p.getId()));
+                }
+                consindex++;
+            }
+            return ;*/
         }
 
         Double averageRate;
@@ -377,6 +392,8 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
                     memberId, consumerTotalLags.get(memberId), partition.lag);
 
             TopicPartition p =  new TopicPartition(partition.getTopic(), partition.getPartition());
+
+
             assignment.get(memberId).add(p);
             consumerTotalLags.put(memberId, consumerTotalLags.getOrDefault(memberId, 0L) + partition.getLag());
             consumerTotalPartitions.put(memberId, consumerTotalPartitions.getOrDefault(memberId, 0) + 1);
@@ -545,7 +562,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
     }
 
 
-    private static void callForAssignment() {
+    private static List<Consumer>  callForAssignment() {
         ManagedChannel managedChannel = ManagedChannelBuilder.forAddress("assignmentservice", 5002)
                 .usePlaintext()
                 .build();
@@ -573,6 +590,9 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
 
             }
         }
+
+
+        return reply.getConsumersList();
 
 
 
