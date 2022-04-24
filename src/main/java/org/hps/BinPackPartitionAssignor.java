@@ -29,6 +29,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
 
     public BinPackPartitionAssignor() {
     }
+
     private Properties consumerGroupProps;
     private Properties metadataConsumerProps;
     private KafkaConsumer<byte[], byte[]> metadataConsumer;
@@ -194,7 +195,7 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
      }
 
 
-
+    //for each consumer returns the list of topic partitions assigned to it.
     static Map<String, List<TopicPartition>> assign(
             Map<String, List<TopicPartitionLag>> partitionLagPerTopic,
             Map<String, List<String>> subscriptions
@@ -306,15 +307,21 @@ public class BinPackPartitionAssignor extends AbstractAssignor implements Config
         } else {
 
             LOGGER.info("Calling the Controller for the assignment");
-            List<Consumer> ass = callForAssignment();
-            LOGGER.info("successfully called the controller for the assignment");
+
+            //This is the assignmenet as returned by the Controller
+          /*  List<Consumer> ass = callForAssignment();
+            LOGGER.info("successfully called the controller for the assignment");*/
 
 
             //TODO needs further test is the assignment returned is ok
             //TODO no need to run any further logic the assignmenet is returned by the Controller
             //TODO we just shall respect it.
+
+            //we get a list of partitions assigned to a consumer
            /* int consindex=0;
             for (String memberId : consumers) {
+                // pick up a consumer returned from the controller, get its assigned partitions
+                // and assign them to any consumer
                 List<Partition> partitions=ass.get(consindex).getAssignedPartitionsList();
 
                 for (Partition p : partitions){
